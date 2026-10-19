@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Breeding Tool — V1.0.0</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="ui-p3.css">
+</head>
+<body>
+<div class="app" id="app">
+<header>
+  <div>
+    <h1>Breeding Tool <span class="version">V1.0.0</span></h1>
+    <div class="subtitle">Local pedigrees and breeding tools generated from your local pet data.</div>
+    <div class="theme-picker" role="group" aria-label="Theme">
+      <span class="theme-label">Theme:</span>
+      <button type="button" class="theme-option" data-theme-choice="default" aria-pressed="true">Default</button>
+      <button type="button" class="theme-option" data-theme-choice="rustic" aria-pressed="false">Rustic</button>
+      <button type="button" class="theme-option" data-theme-choice="concrete" aria-pressed="false">Concrete</button>
+      <button type="button" class="theme-option" data-theme-choice="glass" aria-pressed="false">Glass</button>
+      <button type="button" class="theme-option" data-theme-choice="aluminium" aria-pressed="false">Aluminium</button>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="badge" id="speciesBadge">Species: Snow Wolf</span>
+    <span class="badge" id="populationBadge">Population: —</span>
+    <span class="badge" id="importBadge">JSON: not connected</span>
+    <button class="control" id="disconnectBtn" title="Forget the selected local folder" hidden>Disconnect</button>
+    <div class="folder-help">
+      Select the <strong>BreedingTool</strong> folder containing your pet data.
+      <span class="folder-path">Typical Steam location: <code>...\SteamLibrary\steamapps\common\Icarus\Icarus\Binaries\Win64\ue4ss\Mods\BreedingTool</code></span>
+    </div>
+  </div>
+</header>
+
+<div class="sticky-tools">
+<div class="tool-nav" aria-label="Main tool navigation">
+  <button class="tab view-tab view-all" id="pedigreeBtn">Pedigree</button>
+  <button class="tab view-tab view-breeding breeding-access" id="breedingBtn">Board</button>
+  <button class="tab view-tab view-advisor breeding-access" id="advisorBtn">Advisor</button>
+</div>
+<div class="global-toolbar" aria-label="Global tools">
+  <div class="global-toolbar-left">
+<label>Account: <select class="control" id="accountSelect"><option value="">Select account</option></select></label>
+<span class="small character-context">| Character: <select class="control" id="characterSelect" aria-label="Character"><option value="">Unknown</option></select> <span id="characterState">—</span> |</span>
+<label>World: <select class="control" id="worldSelect"><option value="">Active world</option></select></label><span class="small" id="worldState"></span><span class="small" id="contextAvailability" role="status"></span><button class="control" id="switchLastActiveBtn" hidden>← Switch to last active</button>
+    <button class="control" id="inactiveToggleBtn" title="Show pets excluded from breeding" aria-pressed="false">Show inactive</button>
+  </div>
+  <div class="global-toolbar-right">
+    <button class="control primary-control" id="refreshBtn" title="Select the BreedingTool folder containing your pet data, or refresh it">Connect folder</button>
+    <button class="control" id="cancelCommandBtn" title="Cancel the selected account’s pending command">Cancel pending command</button>
+    <button class="control" id="reloadChoicesBtn" title="Discard unsaved choices and reload the saved version">Reload choices</button><button class="control primary-control" id="saveChoicesBtn" title="Save choices through the running mod">Save choices</button>
+    <div class="search-wrap"><input id="search" class="search global-search" type="search" placeholder="Search…"><button class="search-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button></div>
+  </div>
+</div>
+</div>
+
+<div class="customizable-blocks" id="customizableBlocks">
+  <section class="movable-block context-block" id="contextBlock" data-block-id="context">
+    <span class="block-drag-handle" draggable="true" title="Move block" aria-label="Move block">⠿</span>
+    <div class="context-heading">Categories</div>
+    <div class="category-zone category-species"><div class="category-label">Species</div><div class="tabs" id="speciesTabs"></div><div class="hidden-categories" id="hiddenSpecies"></div></div>
+    <div class="category-zone category-bloodlines"><div class="category-label">Bloodlines</div><div class="tabs" id="bloodlineTabs"></div><div class="hidden-categories" id="hiddenBloodlines"></div></div>
+    <div class="category-zone category-foundations"><div class="category-label">Foundations</div><div class="tabs" id="foundationTabs"></div><div class="hidden-categories" id="hiddenFoundations"></div></div>
+  </section>
+  <section class="breeding-pair-panel movable-block" id="breedingPairPanel" data-block-id="current-pair" aria-labelledby="breedingPairTitle">
+    <span class="block-drag-handle" draggable="true" title="Move block" aria-label="Move block">⠿</span>
+    <div class="pair-heading"><strong id="breedingPairTitle">Current Pair</strong><span class="small" id="breedingPairState"></span><div class="breeding-pair-actions"></div></div>
+    <div class="pair-grid"><div id="pair-female-body"></div><div id="pair-quality"></div><div id="pair-male-body"></div></div>
+    <b id="nextFemaleName" hidden></b><b id="nextMaleName" hidden></b>
+  </section>
+  <div class="detail-shell movable-block" id="detailShell" data-block-id="selected-pet">
+    <div class="detail-toolbar"><span>Selected pet</span><span class="detail-collapse-summary" id="selectedPetSummary">No pet selected</span><button class="control detail-clear" id="clearBtn" title="Clear the current selection">Clear selection</button></div>
+    <span class="block-drag-handle" draggable="true" title="Move block" aria-label="Move block">⠿</span>
+    <aside class="detail" id="detail"><div class="detail-placeholder">Select a pet to inspect and annotate it. Hover a card for a quick summary.</div></aside>
+  </div>
+</div>
+
+<div class="layout">
+  <section class="mainpanel">
+    <div class="lineage-head">
+      <strong id="viewTitle">Complete pedigree</strong>
+      <div class="controls visual-controls" aria-label="View controls">
+        <span class="control-label">Clusters</span>
+        <div class="cluster-parent-toggle" role="group" aria-label="Parent governing pedigree clusters">
+          <button class="control active" id="motherClustersBtn" type="button" aria-pressed="true" title="Group descendants by their female parent">Female</button>
+          <button class="control" id="fatherClustersBtn" type="button" aria-pressed="false" title="Group descendants by their male parent">Male</button>
+        </div>
+        <span class="control-label">View</span>
+        <button class="control" id="zoomOutBtn" title="Zoom out">−</button>
+        <button class="control" id="zoomLabel" title="Current zoom">100%</button>
+        <button class="control" id="zoomInBtn" title="Zoom in">+</button>
+        <button class="control" id="fitBtn" title="Fit the pedigree to the window">Fit</button>
+        <button class="control" id="fitWidthBtn" title="Fit pedigree width">↔</button>
+        <button class="control" id="fitHeightBtn" title="Fit pedigree height">↕</button>
+      </div>
+      <span id="countText"></span>
+    </div>
+    <div class="advisor-wrap" id="advisorWrap">
+      <div class="advisor-intro">
+        <div>
+          <div class="advisor-kicker">Pairing decision support</div>
+          <h2>Advisor</h2>
+          <p>Deterministic next-generation useful quality. Select a breeder to change only that side of Current Pair.</p>
+        </div>
+        <span class="advisor-prototype-badge">Native predictions · V1.0.0</span>
+      </div>
+      <div id="advisorSettings" hidden><div class="advisor-config-grid">
+        <div class="advisor-config-main">
+          <div class="advisor-stat-picker" id="advisorStatPicker">
+            <strong>Stat goals</strong>
+            <div id="advisorStatToggles"></div>
+            <span class="small">Click to toggle. Green: selected for quality / 100. Red: no quality contribution. All seven stats still participate in reproduction and budgets / 60.</span>
+          </div>
+          <div class="advisor-model-note" id="advisorModelNote"></div>
+        </div>
+        <aside class="advisor-stat-reference" id="advisorStatReference" aria-label="Genotype stat reference">
+          <div class="advisor-stat-reference-head"><strong>Genotype reference</strong><span>click a stat</span></div>
+          <div class="advisor-stat-ref-buttons" id="advisorStatReferenceButtons"></div>
+          <div class="advisor-stat-ref-detail" id="advisorStatReferenceDetail"></div>
+        </aside>
+      </div>
+      <p class="small"><strong>Character and individual mutation bonuses are separate.</strong><br>The character bonus comes from the local player’s Genetics talents. A Fierce pet’s individual bonus comes from its native Bloodline growth curve at the last refreshed level; other known Bloodlines contribute 0%. Use Manual Refresh after changing talents or after a Fierce pet levels up.</p>
+      <p id="advisorMutationWarning" class="small advisor-mutation-warning" hidden></p></div>
+      <div id="advisorContent"></div>
+    </div>
+    <div class="canvas-wrap" id="canvasWrap" title="Click and drag to move around the pedigree">
+      <div class="connect-empty" id="connectEmpty">
+        <h2>Connect your local pet census</h2>
+        <p>Click <strong>Connect folder</strong>, select the <strong>BreedingTool</strong> mod folder and grant read/write access. The mod creates its census automatically at startup.</p>
+        <p>If folder access is unavailable, select a coherent Advisor snapshot exported while the game is stopped. The browser can access only the folder you authorize. All census and planning data stays on this computer.</p>
+      </div>
+      <svg id="tree" aria-label="Interactive pet pedigree"></svg>
+    </div>
+    <div class="table-wrap" id="breedingTableWrap">
+      <div class="breeding-options"><span id="breedingCountHint"></span></div>
+      <table class="breeding-table" id="breedingTable"></table>
+      <div class="table-hint">Lifecycle comes from BreedingTool. Archived animals remain in history; active adults are eligible for breeding. Nickname, role and personal breeding choices remain editable.</div>
+    </div>
+    <div class="legend">
+      <span><svg class="legend-link" viewBox="0 0 30 8" aria-hidden="true"><path class="edge mother" d="M1 4H29"/></svg>maternal line</span>
+      <span><svg class="legend-link" viewBox="0 0 30 8" aria-hidden="true"><path class="edge father" d="M1 4H29"/></svg>paternal line</span>
+      <span id="siblingLegend"><svg class="legend-link" viewBox="0 0 30 8" aria-hidden="true"><path class="edge sibling" d="M1 4H29"/></svg>sibling link</span>
+      <span><i class="dot" style="background:var(--active)"></i>active for breeding</span>
+      <span><i class="dot" style="background:var(--culled)"></i>inactive for breeding</span>
+    </div>
+  </section>
+</div>
+<div class="footer">Local data only. Automatic refresh: 5 seconds after folder access is granted. Genetics order: V/F/P/R/T/A/I.</div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<input id="jsonFileFallback" type="file" accept="application/json,.json" hidden>
+
+<script src="stores.js"></script>
+<script src="data.js"></script>
+<script src="native-genetics.js"></script>
+<script src="genetic-quality.js"></script>
+<script src="pair-scoring.js"></script>
+<script src="advisor-ranking.js"></script>
+<script src="advisor-best.js"></script>
+<script src="offspring-preview.js"></script>
+<script src="bloodline-prediction.js"></script>
+<script>
+(()=>{
+ const sticky=document.querySelector('.sticky-tools'),toolbar=document.querySelector('.global-toolbar'),nav=document.querySelector('.tool-nav');
+ toolbar.insertBefore(nav,toolbar.querySelector('.global-toolbar-right'));
+ const goals=document.createElement('div');goals.className='sticky-goals';
+ goals.append(document.getElementById('advisorStatPicker'));sticky.append(goals);
+ const message=document.getElementById('advisorModelNote');goals.append(message);goals.append(document.getElementById('advisorMutationWarning'));
+
+ const left=document.querySelector('.global-toolbar-left');left.insertBefore(document.getElementById('worldSelect').closest('label'),left.querySelector('.character-context'));left.insertBefore(document.getElementById('worldState'),left.querySelector('.character-context'));left.append(document.getElementById('inactiveToggleBtn'));
+ document.querySelector('.global-toolbar-right').prepend(document.getElementById('inactiveToggleBtn'));
+ const command=document.createElement('details');command.className='extra-commands';command.innerHTML='<summary>More</summary><div></div>';
+ document.querySelector('.global-toolbar-right').append(command);
+ for(const id of ['cancelCommandBtn','reloadChoicesBtn','disconnectBtn'])command.lastElementChild.append(document.getElementById(id));
+ const reference=document.createElement('details');reference.className='genotype-reference-menu';reference.innerHTML='<summary>Genotype reference</summary>';reference.append(document.getElementById('advisorStatReference'));command.lastElementChild.append(reference);
+ const pairActions=document.querySelector('.pair-heading .breeding-pair-actions');pairActions.innerHTML='<button class="control" id="recommendPairBtn">↺ Best pair</button><button class="control" id="clearBreedingPairBtn">Clear pair</button><button class="control primary-control" id="sendBreedingPairBtn" disabled>Send to Breeding Panel</button>';
+ const main=document.querySelector('.mainpanel');main.dataset.blockId='main-view';main.classList.add('movable-block');
+ const handle=document.createElement('span');handle.className='block-drag-handle';handle.draggable=true;handle.textContent='⠿';handle.title='Move workspace';main.prepend(handle);
+ document.getElementById('customizableBlocks').append(main);
+ document.querySelector('.layout').remove();
+})();
+</script>
+<script src="app.js"></script>
+</body>
+</html>
